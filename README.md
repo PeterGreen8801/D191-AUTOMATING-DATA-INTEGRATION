@@ -1,4 +1,4 @@
-#Database Project - Automating Data Integration
+# Database Project - Automating Data Integration
 
 INTRODUCTION
 Data analysts frequently perform periodic extraction of data from a larger database. They then use this extracted data for analysis. A single data extract may serve different organizational needs such as populating an executive summary or providing a complete, detailed collection of data. This task will emulate such a process where you will create a repeatable data export, import, and analysis for various stakeholders.
