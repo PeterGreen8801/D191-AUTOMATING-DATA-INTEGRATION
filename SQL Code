@@ -1,0 +1,125 @@
+--Creates the Detailed Table:
+
+CREATE TABLE detailed(
+	rental_id INT PRIMARY KEY,
+	staff_id INT,
+	first_name VARCHAR(50),
+	last_name VARCHAR(50),
+	email VARCHAR(100),
+	store_id INT,
+	rental_date TIMESTAMP
+);
+
+
+--Creates the Summary Table:
+
+CREATE TABLE summary(
+	staff_id INT PRIMARY KEY,
+	full_name VARCHAR(100),
+	total_rentals INT
+);
+
+
+--Inserts data into Detailed Table:
+
+INSERT INTO detailed(
+rental_id, 
+staff_id, 
+first_name, 
+last_name, 
+email, 
+store_id, 
+rental_date
+)
+SELECT 
+r.rental_id, s.staff_id, s.first_name, s.last_name, 
+s.email, s.store_id, r.rental_date
+FROM rental AS r
+INNER JOIN staff AS s ON s.staff_id = r.staff_id;
+
+
+--Inserts data into Summary Table:
+
+INSERT INTO summary(
+SELECT staff_id,
+	CONCAT(first_name, ' ', last_name) AS full_name,
+	COUNT(staff_id)
+FROM detailed
+GROUP BY staff_id, full_name
+HAVING COUNT(staff_id) > 1
+ORDER BY COUNT(staff_id) DESC
+LIMIT 100
+);
+
+
+--Code for functions that perform transformations:
+
+CREATE FUNCTION summary_refresh_function()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+
+DELETE FROM summary;
+
+INSERT INTO summary(
+SELECT staff_id,
+	CONCAT(first_name, ' ', last_name) AS full_name,
+	COUNT(staff_id)
+FROM detailed
+GROUP BY staff_id, full_name
+HAVING COUNT(staff_id) > 1
+ORDER BY COUNT(staff_id) DESC
+LIMIT 100
+);
+
+RETURN NEW;
+END; $$ ;
+
+
+--Trigger on the Detailed Table
+
+CREATE TRIGGER refresh_summary
+AFTER INSERT ON detailed
+FOR EACH STATEMENT
+EXECUTE PROCEDURE summary_refresh_function();
+
+
+--Creates Procedure
+
+CREATE PROCEDURE refresh()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+
+DELETE FROM detailed;
+
+INSERT INTO detailed(
+rental_id, 
+staff_id, 
+first_name, 
+last_name, 
+email, 
+store_id, 
+rental_date
+)
+SELECT 
+r.rental_id, s.staff_id, s.first_name, s.last_name, s.email, s.store_id, r.rental_date
+FROM rental AS r
+INNER JOIN staff AS s ON s.staff_id = r.staff_id;
+
+DELETE FROM summary;
+
+INSERT INTO summary(
+SELECT staff_id,
+	CONCAT(first_name, ' ', last_name) AS full_name,
+	COUNT(staff_id)
+FROM detailed
+GROUP BY staff_id, full_name
+HAVING COUNT(staff_id) > 1
+ORDER BY COUNT(staff_id) DESC
+LIMIT 100
+);
+
+END; $$ ;
+
